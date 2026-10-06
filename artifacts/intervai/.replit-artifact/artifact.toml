@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "IntervAI"
+description = "A responsive AI mock-interview platform where students and job seekers practice role-specific interviews, get feedback, and track progress."
+version = "1.0.0"
+id = "artifacts/intervai"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19538
+
+[services.development]
+run = "pnpm --filter @workspace/intervai run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/intervai", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/intervai/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19538"
+BASE_PATH = "/"

@@ -1,0 +1,627 @@
+Build a complete, modern, responsive web application for the following hackathon problem:
+
+# Problem Statement J8 — AI Mock Interview Platform
+
+The application should help students and job seekers practice interviews using AI. Users should be able to select an interview type, provide their details, start an AI-powered mock interview, answer questions, receive AI-generated feedback, and view their performance history.
+
+## IMPORTANT: DEVELOPMENT CONSTRAINTS
+
+I am using the Replit Free Plan, so optimize the entire project to use as FEW Replit Agent credits and resources as possible.
+
+Follow these rules:
+
+* Do NOT over-engineer the application.
+* Build a clean MVP first.
+* Do not create unnecessary files, components, libraries, animations, or dependencies.
+* Reuse components wherever possible.
+* Prefer simple React/CSS/JavaScript solutions.
+* Do not install packages unless they are genuinely required.
+* Avoid unnecessary backend services.
+* Do not repeatedly rebuild or refactor working code.
+* Make decisions yourself instead of asking unnecessary questions.
+* Implement the project in logical stages.
+* After creating the initial project, inspect the existing files before modifying them.
+* Keep the code beginner-friendly and easy to understand.
+* The final project must be production-ready enough for a hackathon demo.
+
+## TECH STACK
+
+Use:
+
+* React
+* Vite
+* JavaScript
+* CSS
+* Supabase for authentication and database
+* Gemini API for AI interview generation and evaluation
+
+Use the simplest architecture that works reliably.
+
+Do NOT use TypeScript unless absolutely necessary.
+
+Do NOT add Redux or other large state-management libraries.
+
+## ENVIRONMENT VARIABLES — VERY IMPORTANT
+
+NEVER hardcode API keys or credentials directly inside source code.
+
+Use environment variables.
+
+Create/use a `.env` file locally through Replit's Secrets/Environment Variables system.
+
+Use these values:
+
+NEXT_PUBLIC_SUPABASE_URL=https://wnlgfhlnhhhnfxwwhsgo.supabase.co
+
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_A8VqfGcRXcDoP0G0ZiwcVg_hKHMpSq_
+
+The Gemini API key must also be stored as an environment variable:
+
+GEMINI_API_KEY=<I WILL ADD THIS THROUGH REPLIT SECRETS>
+
+IMPORTANT SECURITY RULES:
+
+* Never place GEMINI_API_KEY directly in React frontend code.
+* Never expose GEMINI_API_KEY in browser JavaScript.
+* Never commit `.env` to Git.
+* Add `.env` to `.gitignore`.
+* Use Replit Secrets/Environment Variables for credentials.
+* The Supabase URL and publishable key may be referenced by the frontend through environment variables.
+* Never use a Supabase service-role key in frontend code.
+* Never print API keys in logs.
+* Never display API keys anywhere in the UI.
+
+For Vite frontend variables, use:
+
+VITE_SUPABASE_URL
+VITE_SUPABASE_PUBLISHABLE_KEY
+
+If the existing Replit setup requires the `NEXT_PUBLIC_` names, adapt appropriately, but do not expose the Gemini secret.
+
+If necessary, create a small secure backend/API route for Gemini requests so the Gemini key remains server-side.
+
+## CORE USER FLOW
+
+Build this complete flow:
+
+Landing Page
+↓
+Login / Sign Up
+↓
+Dashboard
+↓
+Choose Interview
+↓
+Configure Interview
+↓
+AI Mock Interview
+↓
+Answer Questions
+↓
+AI Evaluation
+↓
+Results Dashboard
+↓
+Interview History
+
+## 1. LANDING PAGE
+
+Create a polished landing page for an AI Mock Interview Platform.
+
+Include:
+
+* Application name: "IntervAI"
+* Short tagline:
+  "Practice smarter. Interview better."
+* Short explanation of the platform
+* "Start Mock Interview" button
+* "How It Works" section
+* Feature cards
+* Simple footer
+
+Design should look like a modern AI product.
+
+Use a professional dark/modern interface with subtle gradients.
+
+Do not use excessive animations.
+
+## 2. AUTHENTICATION
+
+Use Supabase Authentication.
+
+Implement:
+
+* Sign Up
+* Login
+* Logout
+* Persistent user session
+* Protected dashboard
+
+Signup fields:
+
+* Full Name
+* Email
+* Password
+
+Login fields:
+
+* Email
+* Password
+
+Show friendly validation messages.
+
+Do not build a complicated authentication system from scratch.
+
+## 3. SUPABASE DATABASE
+
+Use Supabase to store user interview information.
+
+Create a simple schema.
+
+Suggested tables:
+
+### profiles
+
+* id
+* full_name
+* email
+* created_at
+
+### interviews
+
+* id
+* user_id
+* interview_type
+* role
+* difficulty
+* score
+* strengths
+* improvements
+* created_at
+
+### interview_questions
+
+* id
+* interview_id
+* question
+* answer
+* feedback
+* score
+
+Use the authenticated user's ID to associate records.
+
+Implement proper Row Level Security so users can only access their own interview data.
+
+Do not store unnecessary information.
+
+## 4. DASHBOARD
+
+After login, show a clean dashboard.
+
+Include:
+
+* Welcome message
+* "Start New Interview" button
+* Total Interviews
+* Average Score
+* Best Score
+* Recent Interviews
+* Performance summary
+
+Example:
+
+"Welcome back, Divya 👋"
+
+Do not hardcode the user's name. Read it from Supabase.
+
+## 5. INTERVIEW CONFIGURATION
+
+Create a simple configuration screen.
+
+Allow the user to select:
+
+### Interview Type
+
+* Technical Interview
+* HR Interview
+* Behavioral Interview
+* General Interview
+
+### Role
+
+Examples:
+
+* Software Developer
+* Frontend Developer
+* Backend Developer
+* Data Analyst
+* AI/ML Engineer
+
+Also allow a custom role.
+
+### Difficulty
+
+* Easy
+* Medium
+* Hard
+
+### Number of Questions
+
+* 5
+* 10
+
+Keep the default at 5 to reduce Gemini API usage during demos.
+
+Button:
+
+"Start Interview"
+
+## 6. GEMINI AI QUESTION GENERATION
+
+Use Gemini to generate interview questions based on:
+
+* Interview type
+* Job role
+* Difficulty
+* Number of questions
+
+The AI should return structured JSON.
+
+Example format:
+
+{
+"questions": [
+{
+"question": "Explain the difference between a stack and a queue."
+}
+]
+}
+
+Validate the response before using it.
+
+If Gemini fails, show a useful error message rather than crashing the application.
+
+To reduce API usage:
+
+* Generate questions ONCE when an interview starts.
+* Do not call Gemini repeatedly for the same question.
+* Store generated questions in Supabase.
+* Never make Gemini calls on every UI render.
+* Do not automatically regenerate questions.
+* Use 5 questions as the default.
+
+## 7. MOCK INTERVIEW SCREEN
+
+Create a professional interview interface.
+
+Display:
+
+* Interview type
+* Role
+* Current question number
+* Total questions
+* Question
+* Answer textarea
+* Previous / Next controls
+* Submit Interview button
+
+Example:
+
+Question 2 of 5
+
+"Explain what a REST API is and how it works."
+
+Textarea:
+
+"Type your answer here..."
+
+Buttons:
+
+Previous
+Next
+
+The user should be able to move between questions without losing answers.
+
+Store answers in application state first.
+
+Do not call Gemini while the user is typing.
+
+## 8. AI EVALUATION
+
+After the user submits the interview, send the completed questions and answers to Gemini for evaluation.
+
+Ask Gemini to evaluate:
+
+* Correctness
+* Relevance
+* Clarity
+* Technical understanding
+* Communication
+
+Return structured JSON.
+
+Example:
+
+{
+"overallScore": 82,
+"strengths": [
+"Good understanding of REST APIs",
+"Clear explanation"
+],
+"improvements": [
+"Add more technical examples"
+],
+"questions": [
+{
+"question": "...",
+"score": 80,
+"feedback": "..."
+}
+]
+}
+
+IMPORTANT:
+
+Make ONE evaluation request for the completed interview instead of making a separate Gemini request for every question.
+
+This is important for reducing API usage and Replit resource usage.
+
+## 9. RESULTS PAGE
+
+Create a polished results dashboard.
+
+Display:
+
+* Overall Score
+* Performance level
+* Strengths
+* Areas to Improve
+* Question-by-question feedback
+
+Example:
+
+Overall Score
+82/100
+
+Performance:
+"Good — You're interview ready, but there is room to improve."
+
+Show each question:
+
+Question
+User Answer
+Score
+AI Feedback
+
+Add:
+
+"Back to Dashboard"
+
+and
+
+"Practice Again"
+
+## 10. INTERVIEW HISTORY
+
+The dashboard should display previous interviews from Supabase.
+
+Show:
+
+* Date
+* Role
+* Interview type
+* Difficulty
+* Score
+
+Allow the user to click an interview and view its results.
+
+Do not load unnecessary data.
+
+Use simple Supabase queries.
+
+## 11. UI / UX
+
+Make the application look like a real AI startup product.
+
+Style:
+
+* Modern
+* Clean
+* Professional
+* Dark navy / black background
+* Subtle blue/purple AI accents
+* Rounded cards
+* Good spacing
+* Clear typography
+* Responsive design
+* Mobile friendly
+
+Use icons only where useful.
+
+Avoid:
+
+* Excessive gradients
+* Huge text
+* Excessive animations
+* Too much empty space
+* Random stock images
+* Unnecessary 3D effects
+
+The interface should feel polished enough for a hackathon presentation.
+
+## 12. ERROR HANDLING
+
+Handle:
+
+* Invalid login
+* Invalid signup
+* Supabase connection failure
+* Gemini API failure
+* Empty answers
+* Invalid Gemini JSON
+* Network failure
+* Missing environment variables
+
+Show understandable messages to the user.
+
+Never expose technical secrets or API keys.
+
+## 13. PERFORMANCE
+
+Optimize for the Replit Free Plan.
+
+Rules:
+
+* Keep dependencies minimal.
+* Avoid polling.
+* Avoid unnecessary API calls.
+* Avoid continuous Gemini requests.
+* Avoid unnecessary Supabase queries.
+* Cache interview state in React state.
+* Save to Supabase only when necessary.
+* Generate questions once.
+* Evaluate the complete interview once.
+* Use lazy loading only if genuinely useful.
+* Keep the frontend lightweight.
+
+## 14. SECURITY
+
+Implement:
+
+* Supabase authentication
+* Protected routes
+* Row Level Security
+* Environment variables
+* No hardcoded Gemini API key
+* No service-role key in frontend
+* Input validation
+* Safe error messages
+
+Make sure one user cannot access another user's interviews.
+
+## 15. DEMO EXPERIENCE
+
+The entire application should work smoothly for a hackathon demo.
+
+Ideal demo:
+
+1. Open IntervAI
+2. Sign up / Login
+3. Dashboard appears
+4. Select "Technical Interview"
+5. Select "Software Developer"
+6. Select "Medium"
+7. Select 5 questions
+8. Start interview
+9. Answer 5 questions
+10. Submit
+11. Gemini evaluates the interview
+12. Results appear
+13. Interview is saved to Supabase
+14. Return to dashboard
+15. Previous interview appears in history
+
+## 16. CODE ORGANIZATION
+
+Keep the project simple.
+
+Suggested structure:
+
+src/
+components/
+pages/
+lib/
+services/
+App.jsx
+main.jsx
+index.css
+
+Use reusable components for:
+
+* Navbar
+* Button
+* Card
+* Input
+* Loading state
+* Error message
+
+Create a simple Supabase client file.
+
+Create a separate Gemini service/API layer.
+
+Do not create dozens of unnecessary files.
+
+## 17. IMPORTANT IMPLEMENTATION ORDER
+
+Because I am using the Replit Free Plan, work in this order:
+
+PHASE 1:
+Set up React/Vite and basic UI.
+
+PHASE 2:
+Implement Supabase authentication.
+
+PHASE 3:
+Implement dashboard and interview configuration.
+
+PHASE 4:
+Implement Gemini question generation.
+
+PHASE 5:
+Implement interview screen.
+
+PHASE 6:
+Implement Gemini evaluation.
+
+PHASE 7:
+Save interview results to Supabase.
+
+PHASE 8:
+Implement history.
+
+PHASE 9:
+Polish UI and responsiveness.
+
+PHASE 10:
+Test the complete flow and fix only actual issues.
+
+Do not spend credits on unnecessary redesigns before the core functionality works.
+
+## 18. BEFORE FINISHING
+
+Check that:
+
+* App starts successfully.
+* No console errors.
+* Login works.
+* Signup works.
+* Logout works.
+* Dashboard works.
+* Supabase connection works.
+* Gemini connection works.
+* Questions generate correctly.
+* Answers are preserved.
+* Evaluation works.
+* Results display correctly.
+* Interview data is saved.
+* History works.
+* Protected routes work.
+* Environment variables are used.
+* Gemini API key is never exposed to the frontend.
+* `.env` is ignored by Git.
+* Production build succeeds.
+* Application is responsive.
+
+If something fails, fix the actual error rather than rewriting the whole application.
+
+## FINAL REQUIREMENT
+
+Build the project as a functional MVP, not just a visual mockup.
+
+Prioritize:
+
+FUNCTIONALITY > SECURITY > RELIABILITY > CLEAN UI > EXTRA FEATURES
+
+Do not add voice interviews, video recording, emotion detection, complex analytics, payment systems, or other advanced features unless the core platform is completely working first.
+
+The goal today is a reliable AI mock interview platform that can be deployed and demonstrated successfully.
