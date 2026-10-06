@@ -167,7 +167,7 @@ function AuthPage() {
     setBusy(true);
     try {
       if (signup) {
-        const { data, error: authError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name } } });
+        const { data, error: authError } = await supabase.auth.signUp({ email, password, options: { data: { full_name: name }, emailRedirectTo: `${window.location.origin}/` } });
         if (authError) throw authError;
         setSuccess(data.session ? 'Your account is ready. Taking you to your studio…' : 'Check your email to confirm your account.');
         if (data.session) setLocation('/dashboard');
