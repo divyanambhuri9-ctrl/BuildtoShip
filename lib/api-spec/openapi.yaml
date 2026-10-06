@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: interviews
+    description: AI interview question generation and evaluation
 paths:
   /healthz:
     get:
@@ -24,7 +26,64 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /interviews/generate:
+    post:
+      operationId: generateInterviewQuestions
+      tags: [interviews]
+      summary: Generate mock interview questions
+      security:
+        - SupabaseBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateQuestionsInput"
+      responses:
+        "200":
+          description: Generated questions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GeneratedQuestions"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "502":
+          description: AI request failed
+  /interviews/evaluate:
+    post:
+      operationId: evaluateInterview
+      tags: [interviews]
+      summary: Evaluate a completed mock interview
+      security:
+        - SupabaseBearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EvaluateInterviewInput"
+      responses:
+        "200":
+          description: Interview evaluation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewEvaluation"
+        "400":
+          description: Invalid request
+        "401":
+          description: Authentication required
+        "502":
+          description: AI request failed
 components:
+  securitySchemes:
+    SupabaseBearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +92,105 @@ components:
           type: string
       required:
         - status
-
+    GenerateQuestionsInput:
+      type: object
+      properties:
+        interviewType:
+          type: string
+          enum: [Technical Interview, HR Interview, Behavioral Interview, General Interview]
+        role:
+          type: string
+          minLength: 2
+          maxLength: 80
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        numberOfQuestions:
+          type: integer
+          enum: [5, 10]
+      required: [interviewType, role, difficulty, numberOfQuestions]
+    InterviewQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 8
+      required: [question]
+    GeneratedQuestions:
+      type: object
+      properties:
+        questions:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/InterviewQuestion"
+      required: [questions]
+    AnsweredInterviewQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+          minLength: 8
+        answer:
+          type: string
+          minLength: 1
+          maxLength: 8000
+      required: [question, answer]
+    EvaluateInterviewInput:
+      type: object
+      properties:
+        interviewType:
+          type: string
+          enum: [Technical Interview, HR Interview, Behavioral Interview, General Interview]
+        role:
+          type: string
+          minLength: 2
+          maxLength: 80
+        difficulty:
+          type: string
+          enum: [Easy, Medium, Hard]
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/AnsweredInterviewQuestion"
+      required: [interviewType, role, difficulty, questions]
+    EvaluatedInterviewQuestion:
+      type: object
+      properties:
+        question:
+          type: string
+        answer:
+          type: string
+        score:
+          type: integer
+          minimum: 0
+          maximum: 100
+        feedback:
+          type: string
+      required: [question, answer, score, feedback]
+    InterviewEvaluation:
+      type: object
+      properties:
+        overallScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        performanceLevel:
+          type: string
+        strengths:
+          type: array
+          items:
+            type: string
+        improvements:
+          type: array
+          items:
+            type: string
+        questions:
+          type: array
+          minItems: 1
+          maxItems: 10
+          items:
+            $ref: "#/components/schemas/EvaluatedInterviewQuestion"
+      required: [overallScore, performanceLevel, strengths, improvements, questions]
