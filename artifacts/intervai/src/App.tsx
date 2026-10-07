@@ -244,13 +244,41 @@ function Dashboard() {
     : averageScore >= 80 ? 'You’re building strong interview confidence.'
     : averageScore >= 60 ? 'You’re making progress with every answer.'
     : 'Keep practicing; steady repetition makes a difference.';
-  return <Protected><Shell active="dashboard"><div className="page-heading"><div><div className="eyebrow">YOUR PRACTICE, IN ONE PLACE</div><h1>Good to have you here{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.</h1><p>Each practice brings you one step closer to ready.</p></div><Link href="/interview/setup" className="button button-primary" data-testid="button-dashboard-practice"><Plus size={16}/> Start a practice</Link></div>
-    <section className="welcome-band"><div className="welcome-orbit"/><div className="welcome-text"><span className="eyebrow">A MOMENT FOR YOU</span><h2>The best way to feel ready<br/>is to <em>show up before.</em></h2><p>Take a breath. Pick a role. We’ll take it from there.</p></div><div className="welcome-index"><span>STUDIO NOTE</span><b>01</b><i>—</i></div></section>
-    <section className="history-summary dashboard-stats" aria-label="Interview performance summary"><div><span>TOTAL INTERVIEWS</span><b data-testid="value-total-interviews">{busy ? '—' : rows.length}</b></div><div><span>AVERAGE SCORE</span><b data-testid="value-average-score">{busy || averageScore == null ? '—' : averageScore}</b></div><div><span>BEST SCORE</span><b data-testid="value-best-score">{busy || bestScore == null ? '—' : bestScore}</b></div><div className="summary-aside"><span>PERFORMANCE SUMMARY</span><p data-testid="text-performance-summary">{busy ? 'Your results are loading.' : performanceSummary}</p></div></section>
-    <div className="section-head"><div><h2>Recent practice</h2><p>Your latest sessions and how they went.</p></div><Link href="/history" className="text-link" data-testid="link-view-history">View all <ArrowRight size={15}/></Link></div>
-    {busy ? <div className="list-skeleton"><div/><div/><div/></div> : error ? <div className="empty-state"><h3>We couldn’t load your practice.</h3><p>{error}</p><button className="button button-secondary" onClick={() => setRefresh(refresh + 1)} data-testid="button-retry-dashboard">Try again</button></div> : rows.length === 0 ? <div className="empty-state"><div className="empty-icon"><BookOpen size={21}/></div><h3>Your first practice is waiting.</h3><p>Start with one interview. You can revisit your feedback any time.</p><Link href="/interview/setup" className="button button-secondary" data-testid="button-empty-start">Start a practice <ArrowRight size={15}/></Link></div> : <div className="recent-list">{rows.slice(0, 5).map((row, i) => <Link key={row.id} href={`/interview/results/${row.id}`} className="recent-row" data-testid={`row-recent-${row.id}`}><span className="recent-number">{String(i + 1).padStart(2, '0')}</span><div className="recent-info"><b>{row.role}</b><span>{row.interview_type} <i>·</i> {row.difficulty}</span></div><span className="recent-date">{new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span><span className="recent-score">{row.score == null ? '—' : row.score}<small>{row.score == null ? 'Not reviewed' : 'SCORE'}</small></span><ChevronRight className="recent-chevron" size={17}/></Link>)}</div>}
+  return <Protected><Shell active="dashboard"><div className="dashboard-page">
+    <section className="dashboard-welcome" aria-labelledby="dashboard-title">
+      <div className="dashboard-welcome-copy">
+        <div className="eyebrow">YOUR PRACTICE, IN ONE PLACE</div>
+        <h1 id="dashboard-title">Welcome back{profile?.full_name ? `, ${profile.full_name.split(' ')[0]}` : ''}.</h1>
+        <p>Build confidence one thoughtful practice at a time.</p>
+      </div>
+      <Link href="/interview/setup" className="button button-primary dashboard-cta" data-testid="button-dashboard-practice"><Sparkles size={17}/> Start Mock Interview <ArrowRight size={16}/></Link>
+      <div className="dashboard-welcome-orbit" aria-hidden="true"><span/><span/></div>
+    </section>
+
+    <section className="dashboard-stats-grid" aria-label="Interview performance summary">
+      <article className="dashboard-stat-card">
+        <span className="dashboard-stat-icon"><BarChart3 size={18}/></span>
+        <div className="dashboard-stat-copy"><span className="dashboard-stat-label">TOTAL INTERVIEWS</span><b data-testid="value-total-interviews">{busy ? '—' : rows.length}</b><small>Practice sessions saved</small></div>
+      </article>
+      <article className="dashboard-stat-card">
+        <span className="dashboard-stat-icon"><Target size={18}/></span>
+        <div className="dashboard-stat-copy"><span className="dashboard-stat-label">AVERAGE SCORE</span><b data-testid="value-average-score">{busy || averageScore == null ? '—' : averageScore}<small className="dashboard-score-out-of">{!busy && averageScore != null ? ' / 100' : ''}</small></b><small>{busy ? 'Loading your results' : averageScore == null ? 'Scores appear after review' : performanceSummary}</small></div>
+      </article>
+      <article className="dashboard-stat-card dashboard-stat-card-best">
+        <span className="dashboard-stat-icon"><Sparkles size={18}/></span>
+        <div className="dashboard-stat-copy"><span className="dashboard-stat-label">BEST SCORE</span><b data-testid="value-best-score">{busy || bestScore == null ? '—' : bestScore}<small className="dashboard-score-out-of">{!busy && bestScore != null ? ' / 100' : ''}</small></b><small>{busy ? 'Loading your results' : bestScore == null ? 'Your top result will show here' : 'Your highest interview score'}</small></div>
+      </article>
+    </section>
+
+    <section className="dashboard-recent-section" aria-labelledby="dashboard-recent-heading">
+      <div className="section-head dashboard-section-head">
+        <div><div className="eyebrow">KEEP YOUR MOMENTUM</div><h2 id="dashboard-recent-heading">Recent Interviews</h2><p>Your latest sessions and how they went.</p></div>
+        <Link href="/history" className="text-link" data-testid="link-view-history">View all <ArrowRight size={15}/></Link>
+      </div>
+      {busy ? <div className="list-skeleton dashboard-list-skeleton"><div/><div/><div/></div> : error ? <div className="empty-state dashboard-empty-state"><h3>We couldn’t load your practice.</h3><p>{error}</p><button className="button button-secondary" onClick={() => setRefresh(refresh + 1)} data-testid="button-retry-dashboard">Try again</button></div> : rows.length === 0 ? <div className="empty-state dashboard-empty-state"><div className="empty-icon"><BookOpen size={21}/></div><h3>Your first mock interview is waiting.</h3><p>Choose a role and practice at your own pace. Your feedback will be saved here.</p><Link href="/interview/setup" className="button button-primary dashboard-cta" data-testid="button-empty-start"><Sparkles size={16}/> Start Mock Interview <ArrowRight size={15}/></Link></div> : <div className="recent-list dashboard-recent-list">{rows.slice(0, 5).map((row, i) => <Link key={row.id} href={`/interview/results/${row.id}`} className="recent-row dashboard-recent-row" data-testid={`row-recent-${row.id}`}><span className="recent-number">{String(i + 1).padStart(2, '0')}</span><div className="recent-info dashboard-recent-info"><b>{row.role}</b><div className="dashboard-interview-tags"><span className="dashboard-interview-type">{row.interview_type}</span><span className="dashboard-difficulty">{row.difficulty}</span></div></div><span className="recent-date dashboard-recent-date">{new Date(row.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</span><span className="recent-score dashboard-recent-score">{row.score == null ? '—' : row.score}<small>{row.score == null ? 'NOT REVIEWED' : 'SCORE / 100'}</small></span><ChevronRight className="recent-chevron" size={17}/></Link>)}</div>}
+    </section>
     <div className="dashboard-footnote"><Clock3 size={15}/> Your practice history is private and saved to your account.</div>
-  </Shell></Protected>;
+  </div></Shell></Protected>;
 }
 
 function SetupPage() {
