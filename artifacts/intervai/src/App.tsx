@@ -419,15 +419,104 @@ function ResultsPage() {
     getResult(params.id, session).then(data => { if (active) { setResult(data); setLoading(false); } }).catch(err => { if (active) { setError(err instanceof Error ? err.message : 'Unable to load results.'); setLoading(false); } });
     return () => { active = false; };
   }, [params.id, session]);
-  return <Protected><Shell active="results">{loading ? <div className="results-loading"><div className="skeleton skeleton-block"/><div className="skeleton skeleton-block"/></div> : error ? <div className="empty-state"><h2>Results couldn’t be loaded.</h2><p>{error}</p><Link href="/history" className="button button-secondary" data-testid="button-results-retry">Go to history</Link></div> : !result ? <div className="empty-state"><h2>We couldn’t find this practice.</h2><p>It may have been removed, or the link may be out of date.</p><Link href="/dashboard" className="button button-secondary" data-testid="button-results-dashboard">Back to overview</Link></div> :
-    <div className="results-page"><div className="result-toolbar"><Link href="/history" className="back-link" data-testid="link-results-history"><ChevronLeft size={16}/> Practice history</Link><span className="eyebrow">{new Date(result.interview.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}</span></div>
-      <section className="result-hero"><div className="result-intro"><div className="eyebrow">PRACTICE REVIEW <span>/</span> {result.interview.interview_type.toUpperCase()}</div><h1>That was a<br/><em>good step.</em></h1><p>{result.interview.role} <span>·</span> {result.interview.difficulty ?? 'Interview'} practice</p></div><div className="result-score-block"><div className="result-score" data-testid="value-overall-score">{result.interview.score ?? '—'}<span>/100</span></div><div className="score-label">OVERALL SCORE</div><span className="result-level">{result.interview.score == null ? 'Awaiting review' : result.interview.score >= 80 ? 'Strong performance' : result.interview.score >= 60 ? 'Building confidence' : 'Room to grow'}</span></div></section>
-      <div className="feedback-columns"><section className="feedback-panel strengths"><div className="feedback-title"><span className="feedback-icon"><Check size={16}/></span><div><h2>What came through</h2><p>Keep bringing these strengths into the room.</p></div></div>{(result.interview.strengths ?? []).length ? <ul>{result.interview.strengths?.map((item, i) => <li key={i} data-testid={`text-strength-${i}`}><span>+</span>{item}</li>)}</ul> : <p className="feedback-empty">Your answers and feedback will be available when a practice has been evaluated.</p>}</section>
-        <section className="feedback-panel improvements"><div className="feedback-title"><span className="feedback-icon"><Target size={16}/></span><div><h2>One thing to sharpen</h2><p>Small shifts can make a strong answer clearer.</p></div></div>{(result.interview.improvements ?? []).length ? <ul>{result.interview.improvements?.map((item, i) => <li key={i} data-testid={`text-improvement-${i}`}><span>↗</span>{item}</li>)}</ul> : <p className="feedback-empty">No improvement notes were saved for this session.</p>}</section></div>
-      <div className="section-head result-questions-head"><div><h2>Question by question</h2><p>Review what you said and the feedback that followed.</p></div><span className="count-pill">{result.questions.length} QUESTIONS</span></div>
-      <div className="result-question-list">{result.questions.map((q, i) => <article className="result-question" key={`${i}-${q.question}`}><div className="rq-head"><span>QUESTION {String(i + 1).padStart(2, '0')}</span>{q.score != null && <span className="rq-score" data-testid={`value-question-score-${i}`}>{q.score}<small>/100</small></span>}</div><h3>{q.question}</h3><div className="rq-answer"><span>YOUR ANSWER</span><p>{q.answer || 'No answer was saved for this question.'}</p></div>{q.feedback && <div className="rq-feedback"><span>FEEDBACK</span><p>{q.feedback}</p></div>}</article>)}</div>
-      <div className="results-end"><span>Practice makes progress. Keep the good work.</span><Link href="/interview/setup" className="button button-primary" data-testid="button-practice-again">Practice again <ArrowRight size={15}/></Link></div>
-    </div>}
+  const overallScore = result?.interview.score ?? null;
+  const scoreProgress = overallScore == null ? 0 : Math.max(0, Math.min(overallScore, 100));
+  const interviewDate = result
+    ? new Date(result.interview.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const performanceLabel = overallScore == null
+    ? 'Awaiting review'
+    : overallScore >= 80
+      ? 'Strong performance'
+      : overallScore >= 60
+        ? 'Building confidence'
+        : 'Room to grow';
+
+  return <Protected><Shell active="results">
+    {loading
+      ? <div className="results-loading"><div className="skeleton skeleton-block"/><div className="skeleton skeleton-block"/></div>
+      : error
+        ? <div className="empty-state"><h2>Results couldn’t be loaded.</h2><p>{error}</p><Link href="/history" className="button button-secondary" data-testid="button-results-retry">Go to history</Link></div>
+        : !result
+          ? <div className="empty-state"><h2>We couldn’t find this practice.</h2><p>It may have been removed, or the link may be out of date.</p><Link href="/dashboard" className="button button-secondary" data-testid="button-results-dashboard">Back to overview</Link></div>
+          : <div className="results-page">
+            <div className="result-toolbar">
+              <Link href="/dashboard" className="button button-secondary result-dashboard-link" data-testid="link-results-dashboard"><ArrowLeft size={15}/> Back to Dashboard</Link>
+              <span className="eyebrow">INTERVIEW RESULTS</span>
+            </div>
+            <section className="result-hero" aria-labelledby="results-title">
+              <div className="result-intro">
+                <div className="eyebrow">PRACTICE REVIEW <span>/</span> {result.interview.interview_type.toUpperCase()}</div>
+                <h1 id="results-title">Your practice,<br/><em>in focus.</em></h1>
+                <p>Take what worked into your next conversation.</p>
+              </div>
+              <div className="result-score-panel">
+                <div
+                  className="result-score-ring"
+                  role="img"
+                  aria-label={`Overall score ${overallScore == null ? 'not available' : `${overallScore} out of 100`}`}
+                  style={{ background: `conic-gradient(#b4baf1 ${scoreProgress}%, #373d51 ${scoreProgress}% 100%)` }}
+                >
+                  <div className="result-score-core">
+                    <strong className="result-score-value" data-testid="value-overall-score">{overallScore ?? '—'}</strong>
+                    <span className="result-score-max">/ 100</span>
+                  </div>
+                </div>
+                <div className="score-label">OVERALL SCORE</div>
+                <span className="result-level">{performanceLabel}</span>
+              </div>
+            </section>
+            <dl className="results-metadata" aria-label="Interview details">
+              <div className="result-meta-item"><dt><AudioLines size={14}/> Interview type</dt><dd>{result.interview.interview_type}</dd></div>
+              <div className="result-meta-item"><dt><FileText size={14}/> Role</dt><dd>{result.interview.role}</dd></div>
+              <div className="result-meta-item"><dt><CircleHelp size={14}/> Difficulty</dt><dd>{result.interview.difficulty ?? 'Not specified'}</dd></div>
+              <div className="result-meta-item"><dt><Clock3 size={14}/> Date</dt><dd>{interviewDate}</dd></div>
+            </dl>
+            <div className="result-feedback-grid">
+              <section className="result-feedback-card strengths" aria-labelledby="results-strengths-title">
+                <div className="result-feedback-heading">
+                  <span className="result-feedback-icon"><Check size={16}/></span>
+                  <div><h2 id="results-strengths-title">Strengths</h2><p>What came through in your answers.</p></div>
+                </div>
+                {(result.interview.strengths ?? []).length
+                  ? <ul className="result-feedback-list">{result.interview.strengths?.map((item, i) => <li key={i} data-testid={`text-strength-${i}`}><span aria-hidden="true">+</span>{item}</li>)}</ul>
+                  : <p className="result-feedback-empty">Your strengths will appear here once this practice has been evaluated.</p>}
+              </section>
+              <section className="result-feedback-card improvements" aria-labelledby="results-improvements-title">
+                <div className="result-feedback-heading">
+                  <span className="result-feedback-icon"><Target size={16}/></span>
+                  <div><h2 id="results-improvements-title">Areas to Improve</h2><p>Specific opportunities for your next practice.</p></div>
+                </div>
+                {(result.interview.improvements ?? []).length
+                  ? <ul className="result-feedback-list">{result.interview.improvements?.map((item, i) => <li key={i} data-testid={`text-improvement-${i}`}><span aria-hidden="true">↗</span>{item}</li>)}</ul>
+                  : <p className="result-feedback-empty">No improvement notes were saved for this session.</p>}
+              </section>
+            </div>
+            <div className="section-head result-question-section-head">
+              <div><h2>Question by question</h2><p>Open any response to review your answer and AI feedback.</p></div>
+              <span className="result-question-count">{result.questions.length} {result.questions.length === 1 ? 'QUESTION' : 'QUESTIONS'}</span>
+            </div>
+            <div className="result-question-list">
+              {result.questions.map((q, i) => (
+                <details className="result-question" key={`${i}-${q.question}`}>
+                  <summary>
+                    <span className="result-question-index">Q{String(i + 1).padStart(2, '0')}</span>
+                    <span className="result-question-title">{q.question}</span>
+                    <span className="result-question-score" data-testid={`value-question-score-${i}`}><strong>{q.score ?? '—'}</strong><small>/100</small></span>
+                    <span className="result-question-toggle"><ChevronRight size={17}/></span>
+                  </summary>
+                  <div className="result-question-content">
+                    <div className="rq-answer"><span>Your answer</span><p>{q.answer || 'No answer was saved for this question.'}</p></div>
+                    <div className="rq-feedback"><span>AI feedback</span><p>{q.feedback || 'AI feedback is not available for this question.'}</p></div>
+                  </div>
+                </details>
+              ))}
+            </div>
+            <div className="results-end">
+              <div><span>Keep building on this practice.</span><p>Each interview is a chance to make your next answer clearer.</p></div>
+              <Link href="/interview/setup" className="button button-primary" data-testid="button-practice-again">Practice Again <ArrowRight size={15}/></Link>
+            </div>
+          </div>}
   </Shell></Protected>;
 }
 
