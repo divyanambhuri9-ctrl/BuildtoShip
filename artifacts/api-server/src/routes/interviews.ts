@@ -8,18 +8,26 @@ import {
 
 const router: IRouter = Router();
 const geminiEndpoint =
-  "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent";
+  "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent";
 
 type GeminiResponse = {
   candidates?: Array<{
+    finishReason?: string;
     content?: {
       parts?: Array<{ text?: string }>;
     };
   }>;
+  promptFeedback?: {
+    blockReason?: string;
+  };
 };
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function redactApiKey(message: string, apiKey = process.env.GEMINI_API_KEY): string {
+  return (apiKey ? message.replaceAll(apiKey, "[redacted]") : message).slice(0, 1000);
 }
 
 async function authenticateRequest(
@@ -100,17 +108,74 @@ async function generateJson(
   });
 
   if (!response.ok) {
-    req.log.warn({ status: response.status }, "Gemini request failed");
+    const responseText = await response.text().catch(() => "");
+    let providerError: Record<string, unknown> | undefined;
+    try {
+      const payload: unknown = JSON.parse(responseText);
+      if (isObject(payload) && isObject(payload.error)) {
+        providerError = payload.error;
+      }
+    } catch {
+      // Keep a concise sanitized response excerpt below for non-JSON errors.
+    }
+    const providerMessage =
+      typeof providerError?.message === "string"
+        ? providerError.message
+        : responseText || `Gemini returned HTTP ${response.status} without an error message.`;
+    req.log.error(
+      {
+        status: response.status,
+        providerCode: typeof providerError?.code === "number" ? providerError.code : undefined,
+        providerStatus: typeof providerError?.status === "string" ? providerError.status : undefined,
+        providerMessage: redactApiKey(providerMessage, apiKey),
+      },
+      "Gemini request failed",
+    );
     return null;
   }
 
-  const payload = (await response.json()) as GeminiResponse;
-  const text = payload.candidates?.[0]?.content?.parts
-    ?.map((part) => part.text ?? "")
+  let rawPayload: unknown;
+  try {
+    rawPayload = await response.json();
+  } catch (error) {
+    req.log.warn(
+      {
+        status: response.status,
+        errorType: error instanceof Error ? error.name : "unknown",
+        errorMessage: redactApiKey(error instanceof Error ? error.message : "Invalid JSON response"),
+      },
+      "Gemini returned an invalid JSON response",
+    );
+    return null;
+  }
+
+  if (!isObject(rawPayload)) {
+    req.log.warn("Gemini returned a response with an unexpected JSON shape");
+    return null;
+  }
+
+  const payload = rawPayload as GeminiResponse;
+  const candidate = payload.candidates?.[0];
+  const parts = Array.isArray(candidate?.content?.parts)
+    ? candidate.content.parts
+    : [];
+  const text = parts
+    .map((part) =>
+      isObject(part) && typeof part.text === "string" ? part.text : "",
+    )
     .join("")
     .trim();
 
-  if (!text) return null;
+  if (!text) {
+    req.log.warn(
+      {
+        finishReason: candidate?.finishReason,
+        blockReason: payload.promptFeedback?.blockReason,
+      },
+      "Gemini returned no text candidate",
+    );
+    return null;
+  }
 
   const withoutFence = text
     .replace(/^```(?:json)?\s*/i, "")
@@ -118,7 +183,14 @@ async function generateJson(
     .trim();
   try {
     return JSON.parse(withoutFence) as unknown;
-  } catch {
+  } catch (error) {
+    req.log.warn(
+      {
+        errorType: error instanceof Error ? error.name : "unknown",
+        responseLength: withoutFence.length,
+      },
+      "Gemini returned non-JSON text",
+    );
     return null;
   }
 }
@@ -153,11 +225,30 @@ router.post("/interviews/generate", async (req, res) => {
     }
 
     const validated = GenerateInterviewQuestionsResponse.safeParse(generated);
-    if (
-      !validated.success ||
-      validated.data.questions.length !== numberOfQuestions
-    ) {
-      req.log.warn("Gemini returned an invalid question set");
+    if (!validated.success) {
+      req.log.warn(
+        {
+          issues: validated.error.issues.map((issue) => ({
+            path: issue.path.join("."),
+            code: issue.code,
+          })),
+        },
+        "Gemini returned an invalid question set",
+      );
+      res.status(502).json({
+        error: "The AI returned an incomplete question set. Please try again.",
+      });
+      return;
+    }
+
+    if (validated.data.questions.length !== numberOfQuestions) {
+      req.log.warn(
+        {
+          expected: numberOfQuestions,
+          received: validated.data.questions.length,
+        },
+        "Gemini returned the wrong number of questions",
+      );
       res.status(502).json({
         error: "The AI returned an incomplete question set. Please try again.",
       });
@@ -172,7 +263,10 @@ router.post("/interviews/generate", async (req, res) => {
       return;
     }
     req.log.warn(
-      { errorType: error instanceof Error ? error.name : "unknown" },
+      {
+        errorType: error instanceof Error ? error.name : "unknown",
+        errorMessage: redactApiKey(error instanceof Error ? error.message : "Unknown Gemini error"),
+      },
       "Gemini request could not be completed",
     );
     res.status(502).json({

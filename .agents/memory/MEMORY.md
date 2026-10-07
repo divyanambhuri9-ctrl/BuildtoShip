@@ -1,0 +1,1 @@
+- [Gemini API model access](gemini-api-model-access.md) — verify actual generation access; model metadata alone may not reflect current key eligibility.
